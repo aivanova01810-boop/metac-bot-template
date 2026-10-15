@@ -89,8 +89,14 @@ class EvidenceAnalystBot(FallTemplateBot2026):
             research = await super().run_research(question)
             self.journal.write('research', **identity(question), source='template', research=research)
             return research
-        async with self._concurrency_limiter:
-            articles = await self.news_fetcher(question)
+        try:
+            async with self._concurrency_limiter:
+                articles = await self.news_fetcher(question)
+        except Exception as exc:
+            # A news outage must not cost the question: forecast on an empty ledger instead.
+            logger.warning('News fetch failed for %s: %s', getattr(question, 'page_url', None), exc)
+            self.journal.write('research_failed', **identity(question), error=repr(exc))
+            return ''
         items = ledger.build(articles)
         self.journal.write('research', **identity(question), source='news_fetcher',
                            ledger=[asdict(e) for e in items], fetched=len(articles))

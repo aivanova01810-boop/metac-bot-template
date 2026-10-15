@@ -117,6 +117,45 @@ class BotTests(unittest.TestCase):
         self.assertIsNone(decision.verifier_accepted)
         self.assertIn('verifier_error', self.journal()[-1])
 
+    def test_news_outage_falls_back_to_empty_ledger(self):
+        async def broken(question):
+            raise RuntimeError('RateLimitExceededError: 429000')
+        bot = self.bot(news=broken)
+        self.assertEqual(asyncio.run(bot.run_research(question())), '')
+        self.assertEqual(self.journal()[-1]['kind'], 'research_failed')
+
+    def test_asknews_backs_off_on_rate_limit_then_gives_up(self):
+        class RateLimitExceededError(Exception):
+            pass
+
+        class Article:
+            eng_title, title, summary, article_url, domain_url, source_id = 'T', 'T', 'S', 'https://a.example/x', 'a.example', 'a'
+            pub_date = '2026-10-14T09:00:00Z'
+
+        waits, calls = [], []
+
+        async def sleep(seconds):
+            waits.append(seconds)
+
+        async def flaky(question):
+            calls.append(1)
+            if len(calls) < 3:
+                raise RateLimitExceededError('429000 - Rate Limit Exceeded')
+            return type('Response', (), {'as_dicts': [Article()]})()
+
+        with patch.dict(os.environ, {'ASKNEWS_API_KEY': 'test-key'}):
+            fetch = asknews_fetcher(sleep=sleep)
+        fetch.search = flaky
+        self.assertEqual(asyncio.run(fetch(question()))[0]['source'], 'a.example')
+        self.assertEqual(waits, [10.0, 20.0])
+
+        async def always_limited(question):
+            raise RateLimitExceededError('429000')
+        fetch.search = always_limited
+        with self.assertRaises(RateLimitExceededError):
+            asyncio.run(fetch(question()))
+        self.assertEqual(waits[2:], [10.0, 20.0, 40.0])
+
     def test_research_without_fetcher_uses_template_path(self):
         self.assertEqual(asyncio.run(self.bot(news=None).run_research(question())), '')
 
