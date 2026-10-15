@@ -11,12 +11,17 @@ from bot_helpers import print_run_summary_banner, silence_noisy_dependencies
 
 silence_noisy_dependencies()
 
-from forecasting_tools import MetaculusClient  # noqa: E402
 
 from evidence_bot.bot import EvidenceAnalystBot, build_llms  # noqa: E402
 from evidence_bot.news import asknews_fetcher  # noqa: E402
 
 dotenv.load_dotenv()
+
+# Explicit slugs, not MetaculusClient.CURRENT_*: the template's poetry.lock pins
+# forecasting-tools 0.2.92, whose "current" tournament is the closed Summer one (33022).
+# Update the slug when the season changes (Fall 2026 closes 2027-03-05).
+SEASON = os.getenv('METACULUS_SEASON_SLUG') or 'fall-futureeval-2026'
+TARGETS = {'tournament': [SEASON, 'minibench'], 'minibench': ['minibench'], 'test_questions': ['bot-testing-area']}
 
 TOURNAMENT_URLS = {
     'tournament': 'https://www.metaculus.com/tournament/fall-futureeval-2026/',
@@ -50,10 +55,7 @@ def main() -> int:
         journal_folder='journal',
         **build_llms(),
     )
-    client = MetaculusClient()
-    targets = {'tournament': [client.CURRENT_AI_COMPETITION_ID, client.CURRENT_MINIBENCH_ID],
-               'minibench': [client.CURRENT_MINIBENCH_ID],
-               'test_questions': ['bot-testing-area']}[args.mode]
+    targets = TARGETS[args.mode]
     reports = []
     for target in targets:
         reports += asyncio.run(bot.forecast_on_tournament(target, return_exceptions=True))
