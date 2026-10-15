@@ -30,6 +30,15 @@ TOURNAMENT_URLS = {
 }
 
 
+async def forecast_targets(bot, targets) -> list:
+    """All tournaments in one event loop: the template's class-level semaphores bind to the
+    first loop that has to wait on them, so a second asyncio.run fails on contention."""
+    reports = []
+    for target in targets:
+        reports += await bot.forecast_on_tournament(target, return_exceptions=True)
+    return reports
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--mode', choices=list(TOURNAMENT_URLS), default='test_questions')
@@ -55,10 +64,7 @@ def main() -> int:
         journal_folder='journal',
         **build_llms(),
     )
-    targets = TARGETS[args.mode]
-    reports = []
-    for target in targets:
-        reports += asyncio.run(bot.forecast_on_tournament(target, return_exceptions=True))
+    reports = asyncio.run(forecast_targets(bot, TARGETS[args.mode]))
     bot.log_report_summary(reports)
     print_run_summary_banner(reports, will_publish=args.publish, tournament_url=TOURNAMENT_URLS[args.mode])
     return 0

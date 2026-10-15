@@ -156,6 +156,25 @@ class BotTests(unittest.TestCase):
             asyncio.run(fetch(question()))
         self.assertEqual(waits[2:], [10.0, 20.0, 40.0])
 
+    def test_tournaments_share_one_event_loop(self):
+        import evidence_main
+        limiter = asyncio.Semaphore(1)
+        loops = []
+
+        class FakeBot:
+            async def forecast_on_tournament(self, target, return_exceptions=True):
+                # Contended acquires bind the semaphore to the running loop, like the template's limiter.
+                async def research():
+                    async with limiter:
+                        await asyncio.sleep(0)
+                await asyncio.gather(research(), research())
+                loops.append(asyncio.get_running_loop())
+                return [target]
+
+        self.assertEqual(asyncio.run(evidence_main.forecast_targets(FakeBot(), ['season', 'minibench'])),
+                         ['season', 'minibench'])
+        self.assertIs(loops[0], loops[1])
+
     def test_research_without_fetcher_uses_template_path(self):
         self.assertEqual(asyncio.run(self.bot(news=None).run_research(question())), '')
 

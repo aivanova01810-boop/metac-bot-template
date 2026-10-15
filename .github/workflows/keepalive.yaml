@@ -1,0 +1,25 @@
+name: Keep schedules alive
+
+# GitHub disables scheduled workflows in public repositories after 60 days without
+# repository activity; the Fall season runs until March, so push an empty commit
+# twice a month to keep the tournament schedule running.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 4 1,15 * *"
+
+permissions:
+  contents: write
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Push an empty commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit --allow-empty -m "keepalive: prevent scheduled workflows from auto-disabling"
+          git push
