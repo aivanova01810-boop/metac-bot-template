@@ -2,9 +2,8 @@ name: Forecast on new AI tournament questions
 
 on:
   workflow_dispatch:
-  # Enable after a successful test run (see EVIDENCE_BOT.md):
-  # schedule:
-  #   - cron: "7,27,47 * * * *" # every 20 min, offset off the hour. Make sure to skip already-forecasted questions!
+  schedule:
+    - cron: "7,27,47 * * * *" # every 20 min, offset off the hour. Make sure to skip already-forecasted questions!
 
 # Add concurrency group to prevent parallel runs
 concurrency:
