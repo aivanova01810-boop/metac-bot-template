@@ -178,7 +178,10 @@ def build_llms() -> dict:
     share the analyst's blind spots; until it is set the verifier is Qwen at temperature 0.
     """
     text = nordrouter_llm()
-    return {'llms': {'default': text, 'parser': text, 'summarizer': text, 'researcher': 'no_research'},
+    # The template parses each answer twice and drops the sample when the parses differ,
+    # so the parser runs at temperature 0.
+    parser = nordrouter_llm(temperature=0)
+    return {'llms': {'default': text, 'parser': parser, 'summarizer': text, 'researcher': 'no_research'},
             'analyst_llm': nordrouter_llm(ANALYST_SCHEMA, 'analyst'),
             'verifier_llm': nordrouter_llm(VERIFIER_SCHEMA, 'verifier', temperature=0,
                                            model=os.environ.get('NORDROUTER_VERIFIER_MODEL'))}
