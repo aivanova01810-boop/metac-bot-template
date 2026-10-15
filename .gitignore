@@ -174,3 +174,7 @@ cython_debug/
 
 # Local scratch/temp scripts
 temp/
+
+# Evidence bot run output (uploaded as CI artifacts instead)
+journal/
+reports/

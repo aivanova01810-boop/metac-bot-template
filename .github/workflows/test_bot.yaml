@@ -37,7 +37,7 @@ jobs:
         run: poetry install --no-interaction --no-root
       - name: Run bot
         run: |
-          poetry run python main.py --mode test_questions
+          poetry run python evidence_main.py --mode test_questions --publish
         # this reads the environment variables from the github repository.
         # Store under Settings --> Secrets and variables --> Actions
         env:
@@ -49,3 +49,16 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           ASKNEWS_CLIENT_ID: ${{ secrets.ASKNEWS_CLIENT_ID }}
           ASKNEWS_SECRET: ${{ secrets.ASKNEWS_SECRET }}
+          ASKNEWS_API_KEY: ${{ secrets.ASKNEWS_API_KEY }}
+          NORDROUTER_API_KEY: ${{ secrets.NORDROUTER_API_KEY }}
+          NORDROUTER_VERIFIER_MODEL: ${{ vars.NORDROUTER_VERIFIER_MODEL }}
+      - name: Keep the evidence journal
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: journal-${{ github.run_id }}
+          path: |
+            journal/
+            reports/
+          if-no-files-found: ignore
+          retention-days: 90
